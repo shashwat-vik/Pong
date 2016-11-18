@@ -29,7 +29,7 @@ class Pong(Screen):
         ball_pos_Y = (self.SCREEN_HEIGHT - self.LINE_THICKNESS)//2
         paddle_pos_Y = (self.SCREEN_HEIGHT - self.PADDLE_SIZE)//2
         ##########
-        # BALL, PADDLE1, PADDLE2
+        # BALL, PADDLE1, PADDLE2, SCORE
         self.ball = pygame.Rect((ball_pos_X, ball_pos_Y), (self.LINE_THICKNESS, self.LINE_THICKNESS))
         self.ballDirX = -1
         self.ballDirY = -1
@@ -37,6 +37,10 @@ class Pong(Screen):
         self.paddle1 = pygame.Rect((self.PADDLE_OFFSET, paddle_pos_Y), (self.LINE_THICKNESS, self.PADDLE_SIZE))
         self.paddle1_velocity = 0
         self.paddle2 = pygame.Rect((self.SCREEN_WIDTH - self.LINE_THICKNESS - self.PADDLE_OFFSET, paddle_pos_Y), (self.LINE_THICKNESS, self.PADDLE_SIZE))
+
+        self.SCORE = 0
+        self.FONT_SIZE = 18
+        self.FONT_WRITER = pygame.font.Font(pygame.font.match_font('consolas'),self.FONT_SIZE)
 
         self.draw_components()
 
@@ -98,13 +102,35 @@ class Pong(Screen):
     def paddle1_control(self):
         self.paddle1.centery += self.paddle1_velocity
 
+    def display_score(self):
+        data = "SCORE: {0}".format(self.SCORE)
+        score_surface = self.FONT_WRITER.render(data, True, self.WHITE)
+        score_rect = score_surface.get_rect()
+        score_rect.topleft = (self.SCREEN_WIDTH - self.LINE_THICKNESS - self.PADDLE_OFFSET - score_rect.width, self.LINE_THICKNESS + self.PADDLE_OFFSET)
+
+        self.SCREEN.blit(score_surface, score_rect)
+
+    def update_score(self):
+        # Reset to 0 if left wall is hit
+        if self.ball.left == self.LINE_THICKNESS:
+            self.SCORE = 0
+        # +1 if ball is hit
+        elif self.ballDirX == -1 and self.paddle1.right == self.ball.left and self.paddle1.top < self.ball.top and self.paddle1.bottom > self.ball.bottom:
+            self.SCORE += 1
+        # +5 on beating evil_AI
+        elif self.ball.right == (self.SCREEN_WIDTH - self.LINE_THICKNESS):
+            self.SCORE += 5
+
     def update_components(self):
         self.draw_components()
         self.move_ball()
         self.paddle1_control()
         self.evil_AI()
         self.check_boundary_collision()
+        self.update_score()
         self.check_paddle_collision()
+
+        self.display_score()
 
     def main(self):
         pygame.init()
