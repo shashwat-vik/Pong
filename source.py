@@ -4,8 +4,8 @@ import pygame
 class Screen:
     def __init__(self):
         # GAME PARAMETERS
-        self.SCREEN_WIDTH = 700
-        self.SCREEN_HEIGHT = 500
+        self.SCREEN_WIDTH = 400
+        self.SCREEN_HEIGHT = 300
         self.FPS = 200
 
         self.SCREEN = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
@@ -31,7 +31,11 @@ class Pong(Screen):
         ##########
         # BALL, PADDLE1, PADDLE2
         self.ball = pygame.Rect((ball_pos_X, ball_pos_Y), (self.LINE_THICKNESS, self.LINE_THICKNESS))
+        self.ballDirX = -1
+        self.ballDirY = -1
+
         self.paddle1 = pygame.Rect((self.PADDLE_OFFSET, paddle_pos_Y), (self.LINE_THICKNESS, self.PADDLE_SIZE))
+        self.paddle1_velocity = 0
         self.paddle2 = pygame.Rect((self.SCREEN_WIDTH - self.LINE_THICKNESS - self.PADDLE_OFFSET, paddle_pos_Y), (self.LINE_THICKNESS, self.PADDLE_SIZE))
 
         self.draw_components()
@@ -59,15 +63,71 @@ class Pong(Screen):
         self.draw_paddle(self.paddle2)
         self.draw_ball(self.ball)
 
+    def move_ball(self):
+        self.ball.x += self.ballDirX
+        self.ball.y += self.ballDirY
+
+    def check_boundary_collision(self):
+        if self.ball.top == self.LINE_THICKNESS or self.ball.bottom == (self.SCREEN_HEIGHT - self.LINE_THICKNESS):
+            self.ballDirY *= -1
+        if self.ball.left == self.LINE_THICKNESS or self.ball.right == (self.SCREEN_WIDTH - self.LINE_THICKNESS):
+            self.ballDirX *= -1
+
+    def check_paddle_collision(self):
+        if self.ballDirX == -1:
+            if self.paddle1.right == self.ball.left and self.paddle1.top < self.ball.top and self.paddle1.bottom > self.ball.bottom:
+                self.ballDirX *= -1
+        if self.ballDirX == 1:
+            if self.paddle2.left == self.ball.right and self.paddle2.top < self.ball.top and self.paddle2.bottom > self.ball.bottom:
+                self.ballDirX *= -1
+
+    def evil_AI(self):
+        # HIT
+        if self.ballDirX == 1:
+            if self.paddle2.centery < self.ball.centery:
+                self.paddle2.y += 1
+            elif self.paddle2.centery > self.ball.centery:
+                self.paddle2.y -= 1
+        # CENTER-ALIGN
+        elif self.ballDirX == -1:
+            if self.paddle2.centery < self.SCREEN_HEIGHT/2:
+                self.paddle2.y += 1
+            elif self.paddle2.centery > self.SCREEN_HEIGHT/2:
+                self.paddle2.y -= 1
+
+    def paddle1_control(self):
+        self.paddle1.centery += self.paddle1_velocity
+
+    def update_components(self):
+        self.draw_components()
+        self.move_ball()
+        self.paddle1_control()
+        self.evil_AI()
+        self.check_boundary_collision()
+        self.check_paddle_collision()
+
     def main(self):
         pygame.init()
         self.init_components()
+        pygame.mouse.set_visible(False)
 
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.MOUSEMOTION:
+                    self.paddle1.y = event.pos[1]
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        self.paddle1_velocity = -1
+                    elif event.key == pygame.K_DOWN:
+                        self.paddle1_velocity = 1
+                elif event.type == pygame.KEYUP:
+                    if event.key in [pygame.K_UP, pygame.K_DOWN]:
+                        self.paddle1_velocity = 0
+
+            self.update_components()
 
             pygame.display.update()
             self.CLOCK.tick(self.FPS)
